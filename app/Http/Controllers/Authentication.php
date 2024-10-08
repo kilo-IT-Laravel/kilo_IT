@@ -28,7 +28,7 @@ class Authentication extends Controller
                 'password' => 'required|string|min:8|confirmed'
             ])->validate();
 
-            $defaultId = Role::where('name', 'user')->first()->id;
+            $defaultId = Role::where('name', 'owner')->first()->id;
 
             $user = User::create([
                 'name' => $validated['name'],

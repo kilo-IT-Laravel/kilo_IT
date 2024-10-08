@@ -60,7 +60,7 @@ class UserManagement extends Controller
 
     public function UpdateRolePermissions(Role $role)
     {
-
+        
         $this->req->validate([
             'permissions' => 'required|array|int',
             'permissions.*' => 'exists:permissions,id',
@@ -119,8 +119,8 @@ class UserManagement extends Controller
     {
         $perPage = $this->req->per_page ?? 10;
         try {
-            $data = $this->Repository->getTrash($perPage);
-            return response()->json(['success' => false, 'data' => new softdeleteuserCollection($data), 'message' => 'Soft deleted users retrieved successfully'], 200);
+            $data = $this->Repository->getTrash($perPage);//change fron false to true
+            return response()->json(['success' => true, 'data' => new softdeleteuserCollection($data), 'message' => 'Soft deleted users retrieved successfully'], 200);
         } catch (\Exception $e) {
             Log::error('Error retrieving trashed users: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to get softdelete users'], 500);

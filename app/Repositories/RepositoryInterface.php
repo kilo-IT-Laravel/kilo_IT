@@ -15,4 +15,5 @@ interface RepositoryInterface {
     public function getTrash(int $perPage): LengthAwarePaginator;
     public function restore(int $userId): void;
     public function forceDelete(int $userId): void;
+    
 }

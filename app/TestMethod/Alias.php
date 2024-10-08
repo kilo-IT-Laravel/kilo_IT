@@ -6,7 +6,9 @@ class Alias{
     
     public function getMethod(){
         return [
-            'testMethod' => [$this , 'getBasicHellowWorld']
+            'testMethod' => [$this , 'getBasicHellowWorld'],
+            // 'example' => [new ExampleCon , '']
+
         ];
     }
 
