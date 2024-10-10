@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RepositoryController implements RepositoryInterface {
     public function getUsers(string $search = null, int $perPage = 10): LengthAwarePaginator
@@ -84,6 +85,7 @@ class RepositoryController implements RepositoryInterface {
     public function restore(int $userId): void
     {
         try {
+            Log::info($userId);
             $user = User::withTrashed()->findOrFail($userId);
             $user->restore();
         } catch (ModelNotFoundException $e) {
@@ -104,4 +106,6 @@ class RepositoryController implements RepositoryInterface {
             throw new \Exception('Failed to permanently delete');
         }
     }
+
+
 }

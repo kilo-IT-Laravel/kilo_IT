@@ -17,6 +17,7 @@ class Role extends Model
     public const USER = 'user';
     public const ARTHUR = 'arthur';
 
+
     public static function allRoles(): array
     {
         return [

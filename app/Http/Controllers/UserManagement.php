@@ -62,8 +62,8 @@ class UserManagement extends Controller
     {
         
         $this->req->validate([
-            'permissions' => 'required|array|int',
-            'permissions.*' => 'exists:permissions,id',
+            'permissions' => 'required|array',
+            'permissions.*' => 'int|exists:permissions,id',
         ]);
 
         try {
@@ -152,4 +152,6 @@ class UserManagement extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to  Force Delete user'], 500);
         }
     }
+
+   
 }

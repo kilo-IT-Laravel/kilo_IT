@@ -28,19 +28,31 @@ class Authentication extends Controller
                 'password' => 'required|string|min:8|confirmed'
             ])->validate();
 
-            $defaultId = Role::where('name', 'owner')->first()->id;
+            $userRole = Role::where('name', 'user','')->first();
+
+            if(!$userRole){
+                $userRole = Role::create(['name' => 'user']);
+            }
+
+            $defaultProfileImage = 'https://example.com/images/default_profile.png';
 
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
-                'role_id' => $defaultId
+                'role_id' => $userRole->id,
+                'user_profile' => $defaultProfileImage
             ]);
 
             $expireDate = now()->addDays(7);
             $token = $user->createToken('my_token' , expiresAt:$expireDate)->plainTextToken;
 
-            return response()->json(['success' => true, 'message' => 'welcome new member ^w^', 'user' => $user, 'token' => $token], 201);
+            return response()->json([
+            'success' => true, 
+            'message' => 'welcome new member ^w^',
+            'user_profile' => $defaultProfileImage, 
+            'user' => $user,
+            'token' => $token], 201);
         } catch (ValidationException $e) {
             $customErrorMessage = 'Oops, looks like something went wrong with your submission.';
             return response(['success' => false, 'message' => $customErrorMessage , 'issues' => $e->errors()], 422);
@@ -58,16 +70,24 @@ class Authentication extends Controller
                 'password' => 'required',
             ],CustomValue::LoginMsg())->validate();
 
+            //find user by email
             $user = User::where('email', $validated['email'])->first();
-
+            //check if user have and password not match
             if (!$user || !Hash::check($validated['password'], $user->password)) {
                 return response(['success' => false, 'message' => "incorrect credential! >w<"]);
             }
 
+
             $expireDate = now()->addDays(7);
             $token = $user->createToken('my_token' , expiresAt:$expireDate)->plainTextToken;
 
-            return response()->json(['success' => true, 'message' => 'welcome back master :3', 'user' => $user, 'token' => $token], 200);
+            return response()->json([
+                'success' => true, 
+                'message' => 'welcome back master :3', 
+                'user' => $user, 
+                'token' => $token], 200);   
+
+
         } catch (ValidationException $e) {
             $customErrorMessage = 'oops look likes something wrong with your submission';
             return response(['success' => false, 'message' => $customErrorMessage, 'issues' => $e->errors()], 422);
