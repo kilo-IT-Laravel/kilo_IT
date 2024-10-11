@@ -25,6 +25,6 @@ class post extends Model
 
     public function uploadMedia()
     {
-        return $this->hasMany(upload_media::class);
+        return $this->hasOne(upload_media::class);
     }
 }
