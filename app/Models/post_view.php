@@ -17,6 +17,7 @@ class post_view extends Model
         return $this->belongsTo(post::class);
     }
 
+
     public function user()
     {
         return $this->belongsTo(User::class);
