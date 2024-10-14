@@ -2,29 +2,28 @@
 
 namespace App\Repositories\Category;
 
-use App\Models\categorie;
+use App\Models\Category;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Log;
 
-class CategoryController implements CategoryInterface
+class CategoryRepository implements CategoryInterface
 {
-
     public function getAllCategories(): Collection
     {
         try {
-            return categorie::all();
+            return Category::all();
         } catch (Exception $e) {
             Log::error('Database error: ' . $e->getMessage());
             throw new Exception('Error retrieving categories');
         }
     }
 
-    public function getCategoryById(int $id): ?categorie
+    public function getCategoryById(int $id): ?Category
     {
         try {
-            return categorie::findOrFail($id);
+            return Category::findOrFail($id);
         } catch (ModelNotFoundException $e) {
             return null;
         } catch (Exception $e) {
@@ -33,23 +32,10 @@ class CategoryController implements CategoryInterface
         }
     }
 
-    public function deleteCategory(int $id): bool
+    public function createCategory(array $categoryDetails): Category
     {
         try {
-            $category = categorie::findOrFail($id);
-            return $category->delete();
-        } catch (ModelNotFoundException $e) {
-            return false;
-        } catch (Exception $e) {
-            Log::error('Database error: ' . $e->getMessage());
-            throw new Exception('Error deleting category');
-        }
-    }
-
-    public function createCategory(array $categoryDetails): categorie
-    {
-        try {
-            return categorie::create($categoryDetails);
+            return Category::create($categoryDetails);
         } catch (Exception $e) {
             Log::error('Database error: ' . $e->getMessage());
             throw new Exception('Error creating category');
@@ -59,7 +45,7 @@ class CategoryController implements CategoryInterface
     public function updateCategory(int $id, array $newDetails): bool
     {
         try {
-            $category = categorie::findOrFail($id);
+            $category = Category::findOrFail($id);
             return $category->update($newDetails);
         } catch (ModelNotFoundException $e) {
             return false;
@@ -69,15 +55,16 @@ class CategoryController implements CategoryInterface
         }
     }
 
-    public function getCategoryBySlug(string $slug): ?categorie
+    public function deleteCategory(int $id): bool
     {
         try {
-            return categorie::where('slug', $slug)->firstOrFail();
+            $category = Category::findOrFail($id);
+            return $category->delete();
         } catch (ModelNotFoundException $e) {
-            return null;
+            return false;
         } catch (Exception $e) {
             Log::error('Database error: ' . $e->getMessage());
-            throw new Exception('Error retrieving category by slug');
+            throw new Exception('Error deleting category');
         }
     }
 }
