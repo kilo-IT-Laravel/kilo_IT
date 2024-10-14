@@ -1,20 +1,49 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Repositories\PostViews\PostViewRepository;
 
-use App\Repositories\PostViews\PostViewInterface;
 use Illuminate\Http\Request;
 
 class PostViewController extends Controller
 {
-    private Request $req;
+    protected $postViewRepository;
 
-    protected $Repository;
-
-    public function __construct(PostViewInterface $repository, Request $req)
+    public function __construct(PostViewRepository $postViewRepository)
     {
-        $this->req = $req;
-        $this->Repository = $repository;
+        $this->postViewRepository = $postViewRepository;
+    }
+
+    // Record a view
+    public function recordView(Request $request, $postId)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer'
+        ]);
+
+        $view = $this->postViewRepository->recordView($postId, $validated['user_id']);
+        return response()->json($view, 201);
+    }
+
+    // Get views by post
+    public function getViewsByPost($postId)
+    {
+        $views = $this->postViewRepository->getViewsByPost($postId);
+        return response()->json($views);
+    }
+
+    // Get views by user
+    public function getViewsByUser($userId)
+    {
+        $views = $this->postViewRepository->getViewsByUser($userId);
+        return response()->json($views);
+    }
+
+    // Check if user viewed a post
+    public function checkUserViewedPost($postId, $userId)
+    {
+        $hasViewed = $this->postViewRepository->hasUserViewedPost($postId, $userId);
+        return response()->json(['viewed' => $hasViewed]);
     }
 
 }

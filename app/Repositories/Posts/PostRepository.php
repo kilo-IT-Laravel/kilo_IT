@@ -1,40 +1,18 @@
 <?php
 
-// namespace App\Repositories\Posts;
-
-// use App\Models\post;
-
-// class PostController {
-//     public function all(): post
-//     {
-//         $category = post::all()->latest();
-
-//         return $category;
-//     }
-
-//     public function find(int $id): post
-//     {
-//         return post::all()->latest();
-//     }
-
-//     public function create(array $data): void {}
-
-//     public function update($id, array $data): void {}
-
-//     public function delete($id): void {}
-// }
-
-
 namespace App\Repositories\Posts;
 
 use App\Models\Post;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+
 use Exception;
 
 class PostRepository implements PostInterface
+
 {
+
     // Retrieve all posts with pagination, filtering, and sorting
     public function all($filters = [], $pagination = 10, $sortBy = 'created_at', $sortOrder = 'desc')
     {
@@ -56,7 +34,7 @@ class PostRepository implements PostInterface
         if (isset($filters['search'])) {
             $query->where(function ($q) use ($filters) {
                 $q->where('title', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('description', 'like', '%' . $filters['search'] . '%');
+                    ->orWhere('description', 'like', '%' . $filters['search'] . '%');
             });
         }
 
@@ -181,4 +159,64 @@ class PostRepository implements PostInterface
             throw new Exception("Invalid media file.");
         }
     }
+
+    public function getPostsByAuthor(int $authorId)
+    {
+        return Post::where('author_id', $authorId)->get();
+    }
+
+    public function getPublishedPosts()
+    {
+        return Post::published()->get();
+    }
+
+    // Increment the views of a post
+    public function incrementViews($id)
+    {
+        $post = $this->find($id);
+        $post->incrementViews();
+        return $post;
+    }
+
+    // Publish a post
+    public function publish($id)
+    {
+        $post = $this->find($id);
+        $post->publish();
+        return $post;
+    }
+
+    // Unpublish a post
+    public function unpublish($id)
+    {
+        $post = $this->find($id);
+        $post->unpublish();
+        return $post;
+    }
+
+    // Like a post
+    public function like($postId, $userId)
+    {
+        $post = $this->find($postId);
+        $post->likes()->attach($userId);
+    }
+
+    // Unlike a post
+    public function unlike($postId, $userId)
+    {
+        $post = $this->find($postId);
+        $post->likes()->detach($userId);
+    }
+    
+     // Retrieve all posts, including soft deleted ones
+     public function onlyTrashed($pagination = 10)
+     {
+         $query = Post::withTrashed();
+ 
+         return Post::onlyTrashed()->get();
+ 
+         return $query->paginate($pagination);
+     }
+
+
 }

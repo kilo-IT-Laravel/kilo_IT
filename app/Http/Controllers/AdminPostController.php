@@ -24,33 +24,50 @@ class AdminPostController extends Controller
     public function show($id)
     {
         return response()->json($this->postRepository->find($id));
+        if (!$post){
+            return request()->json(['message' => 'Post not found'], 404);
+        }
+        return request()->json([$post]);
     }
 
     // Admin can create a post
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
+        $validated  = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'category_id' => 'required|integer',
             'author_id' => 'required|integer',
             'thumbnail' => 'nullable|image',
+            'read_time' => 'nullable|integer',
+            'published_at' => 'nullable|date'
         ]);
 
-        $this->postRepository->create($validatedData);
+        $post = $this->postRepository->create($validated);
 
-        return response()->json(['message' => 'Post created successfully'], 201);
+        return response()->json(['message' => 'Post created successfully' ,$post], 201);
     }
 
     // Admin can update any post
     public function update(Request $request, $id)
+
     {
-        $validatedData = $request -> validate ([
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|required|string',
+        $post = $this->postRepository->find($id);
+
+         if (!$post) {
+             return response()->json(['message' => 'Post not found'], 404);
+         }
+
+        $validated  = $request -> validate ([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'category_id' => 'required|exists:categories,id',
+            'thumbnail' => 'nullable|url',
+            'read_time' => 'nullable|integer',
+            'published_at' => 'nullable|date'
         ]);
 
-        $this->postRepository->update($id, $request->all());
+        $updatedPost = $this->postRepository->update($id, $validated);
 
         return response()->json(['message' => 'Post updated successfully']);
     }
@@ -58,8 +75,12 @@ class AdminPostController extends Controller
     // Admin can delete any post
     public function destroy($id)
     {
-        $this->postRepository->delete($id);
+        $post = $this->postRepository->find($id);
+        if (!$post) {
+            return response()->json(['message' => 'Post not found'], 404);
+        }
 
+        $this->postRepository->delete($id);
         return response()->json(['message' => 'Post deleted successfully']);
     }
 }

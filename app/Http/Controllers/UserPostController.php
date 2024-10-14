@@ -2,89 +2,92 @@
 
 namespace App\Http\Controllers;
 
-use App\Repositories\Posts\PostInterface;
+use App\Models\Post;
 use Illuminate\Http\Request;
+use App\Repositories\Posts\PostRepository;
 use Illuminate\Support\Facades\Auth;
-
-
 class UserPostController extends Controller
 {
     protected $postRepository;
 
-    public function __construct(PostInterface $postRepository)
+    public function __construct(PostRepository $postRepository)
     {
         $this->postRepository = $postRepository;
     }
 
-    // view own post 
-    public function index()
+    // List all posts created by the authenticated user
+    public function index(Request $request)
     {
-        $userId = Auth::id();
-        $posts = $this->postRepository->all()->where('author_id', $userId);
-
+        $user = Auth::user();
+        $posts = $this->postRepository->getPostsByAuthor($user->id);
         return response()->json($posts);
     }
 
-    // Users can view a specific post 
-    public function show($id)
+    // Show a specific post created by the authenticated user
+    public function show(Request $request, $id)
     {
+        $user = $request->user();
         $post = $this->postRepository->find($id);
 
-        if ($post->author_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if (!$post || $post->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized or Post not found'], 403);
         }
 
         return response()->json($post);
     }
 
-    // Users can create their own post
+    // Create a new post by the authenticated user
     public function store(Request $request)
-
-    {   
-        $validatedData = $request->validate ([
+    {
+        $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'category_id' => 'required|integer',
+            'category_id' => 'required|exists:categories,id',
+            'thumbnail' => 'nullable|url',
+            'read_time' => 'nullable|integer',
+            'published_at' => 'nullable|date'
         ]);
 
-        $data = $request->all();
-        $data['author_id'] = Auth::id(); // Automatically set the authenticated user as the author
+        $validated['author_id'] = $request->user()->id;
+        $post = $this->postRepository->create($validated);
 
-        $this->postRepository->create($data);
-
-        return response()->json(['message' => 'Post created successfully'], 201);
+        return response()->json($post, 201);
     }
 
-    // Users can update only their own posts
+    // Update a post created by the authenticated user
     public function update(Request $request, $id)
     {
+        $user = $request->user();
         $post = $this->postRepository->find($id);
 
-        if ($post->author_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if (!$post || $post->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized or Post not found'], 403);
         }
 
-        $validatedData = $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|required|string',
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'category_id' => 'required|exists:categories,id',
+            'thumbnail' => 'nullable|url',
+            'read_time' => 'nullable|integer',
+            'published_at' => 'nullable|date'
         ]);
 
-        $this->postRepository->update($id, $request->all());
-
-        return response()->json(['message' => 'Post updated successfully']);
+        $updatedPost = $this->postRepository->update($id, $validated);
+        return response()->json($updatedPost);
     }
 
-    // Users can delete only their own posts
-    public function destroy($id)
+    // Delete a post created by the authenticated user
+    public function destroy(Request $request, $id)
     {
+        $user = $request->user();
         $post = $this->postRepository->find($id);
 
-        if ($post->author_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if (!$post || $post->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized or Post not found'], 403);
         }
 
         $this->postRepository->delete($id);
-
         return response()->json(['message' => 'Post deleted successfully']);
     }
 }

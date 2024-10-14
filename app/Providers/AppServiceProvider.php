@@ -2,9 +2,10 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostViewController as ControllersPostViewController;
 use App\Repositories\Category\CategoryController;
 use App\Repositories\Category\CategoryInterface;
-use App\Repositories\Posts\PostController;
 use App\Repositories\Posts\PostInterface;
 use App\Repositories\PostViews\PostViewController;
 use App\Repositories\PostViews\PostViewInterface;
@@ -24,9 +25,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(UserInterface::class , UserController::class);
-        $this->app->bind(CategoryInterface::class , CategoryController::class);
-        $this->app->bind(PostInterface::class , PostController::class);
-        $this->app->bind(PostViewInterface::class , PostViewController::class);
+        $this->app->bind(CategoryInterface::class , CategoryController::class); 
+        $this->app->bind(PostInterface::class, PostController::class);
+        $this->app->bind(PostViewInterface::class, ControllersPostViewController::class);
         $this->app->bind(TopicInterface::class , TopicController::class);
         $this->app->bind(UploadMediaInterface::class , UploadMediaController::class);
     }
