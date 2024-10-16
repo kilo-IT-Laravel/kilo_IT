@@ -3,15 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\Policies;
 use App\Repositories\Posts\PostRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PostController extends Controller
 {
+    use AuthorizesRequests;
+
     protected $postRepository;
 
     public function __construct(PostRepository $postRepository)
@@ -94,6 +98,11 @@ class PostController extends Controller
                 'read_time' => 'nullable|integer',
             ]);
 
+            $post = $this->postRepository->find($id);
+
+            // Apply authorization check
+            $this->authorize('update', $post);
+
             $post = $this->postRepository->update($id, $validated);
 
             if (!$post) {
@@ -101,10 +110,10 @@ class PostController extends Controller
             }
 
             return response()->json($post, 200);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['error' => 'You are not authorized to update this post'], 403);
         } catch (ValidationException $e) {
             return response()->json(['error' => $e->errors()], 422);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['error' => 'Post not found'], 404);
         } catch (\Exception $e) {
             Log::error('Error updating post: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to update post'], 500);
@@ -132,22 +141,36 @@ class PostController extends Controller
     public function publish($id)
     {
         try {
-           
+            $post = $this->postRepository->find($id);
+
+            // Apply authorization check
+            $this->authorize('publish', $post);
+
             $this->postRepository->publish($id);
-         
+
             return response()->json(['message' => 'Post published'], 200);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['error' => 'You are not authorized to publish this post'], 403);
         } catch (\Exception $e) {
             Log::error('Error publishing post: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to publish post'], 500);
         }
     }
 
+
     // Unpublish a post
     public function unpublish($id)
     {
         try {
+            $post = $this->postRepository->find($id);
+        
+            $this->authorize('unpublish', $post);
+
             $this->postRepository->unpublish($id);
             return response()->json(['message' => 'Post unpublished'], 200);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['error' => 'You are not authorized to Unpublish this post'], 403);
+
         } catch (\Exception $e) {
             Log::error('Error unpublishing post: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to unpublish post'], 500);
@@ -158,8 +181,15 @@ class PostController extends Controller
     public function softDelete($id)
     {
         try {
+            $post = $this->postRepository->find($id);
+
+            $this->authorize('delete', $post);
+
             $this->postRepository->delete($id);
+
             return response()->json(['message' => 'Post deleted successfully'], 200);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['error' => 'You are not authorized to delete this post'], 403);
         } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Post not found'], 404);
         } catch (\Exception $e) {
@@ -172,8 +202,16 @@ class PostController extends Controller
     public function restore($id)
     {
         try {
+            $post = $this->postRepository->find($id);
+
+
+            $this->authorize('restore', $post);
+
             $this->postRepository->restore($id);
             return response()->json(['message' => 'Post restored successfully'], 200);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['error' => 'You are not authorized to restore this post'], 403);
+            
         } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Post not found'], 404);
         } catch (\Exception $e) {
@@ -225,7 +263,7 @@ class PostController extends Controller
     {
         try {
             $trashedPosts = $this->postRepository->onlyTrashed();
-            if($trashedPosts->isEmpty()) {
+            if ($trashedPosts->isEmpty()) {
                 return response()->json(['message' => 'No trashed posts found'], 200);
             }
             return response()->json($trashedPosts, 200);

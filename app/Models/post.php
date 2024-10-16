@@ -39,7 +39,7 @@ class post extends Model
 
     public function uploadMedia()
     {
-        return $this->hasOne(upload_media::class);
+        return $this->hasMany(upload_media::class);
     }
 
     //filter public post 
@@ -48,28 +48,16 @@ class post extends Model
         return $query->whereNotNull('published_at')->where('published_at', '<=', now());
     }
 
-    public function incrementViews()
-    {
-        $this->views += 1;
-        $this->save();
-    }
+    // public function incrementViews()
+    // {
+    //     $this->views += 1;
+    //     $this->save();
+    // }
 
     // Publish post
-    public function publish()
-    {
-        $this->published_at = now();
-        $this->save();
-    }
-
-    // Unpublish post
-    public function unpublish()
-    {
-        $this->published_at = null;
-        $this->save();
-    }
-
-    public function likes()
-    {
-        return $this->belongsToMany(User::class, 'likes');  
-    }
+    
+    // public function likes()
+    // {
+    //     return $this->belongsToMany(User::class, 'likes');  
+    // }
 }

@@ -77,13 +77,13 @@ Route::middleware('auth:sanctum')->group(function(){
         Route::put('posts/{id}', [PostController::class, 'update']);
         Route::delete('posts/{id}', [PostController::class, 'softDelete']);
         Route::post('posts/{id}/restore', [PostController::class, 'restore']);
-       Route::delete('posts/{id}/force', [PostController::class, 'forceDelete']);
+        Route::delete('posts/{id}/force', [PostController::class, 'forceDelete']);
         Route::get('trashed', [PostController::class, 'trashed']);
         
         // Publishing and interaction routes
         Route::post('posts/{id}/publish', [PostController::class, 'publish']);
         Route::post('posts/{id}/unpublish', [PostController::class, 'unpublish']);
-       Route::post('posts/{id}/like', [PostController::class, 'like']);
+        Route::post('posts/{id}/like', [PostController::class, 'like']);
         Route::delete('posts/{id}/like', [PostController::class, 'unlike']);
     });
 
