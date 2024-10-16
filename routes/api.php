@@ -1,7 +1,8 @@
 <?php
 
 use App\Events\testing;
-use App\Http\Controllers\Authentication;
+use App\Http\Controllers\Auth\authenticate;
+use App\Http\Controllers\TopicController;
 use App\Http\Controllers\UserManagement;
 use App\TestMethod\SwitchMe;
 use Illuminate\Http\Request;
@@ -10,8 +11,10 @@ use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserPostController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostViewController;
-Route::post('/register',[Authentication::class , 'register']);
-Route::post('/login',[Authentication::class , 'login']);
+use App\Http\Controllers\CategoryController;
+
+Route::post('/register',[authenticate::class , 'register']);
+Route::post('/login',[authenticate::class , 'login']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/profile', [UserProfileController::class, 'show']);
@@ -42,8 +45,12 @@ Route::middleware('auth:sanctum')->group(function(){
         Route::get('/auditlog/{userId}' , [UserManagement::class , 'getAuditLogs'])->middleware(['role:super_admin' , 'permission:delete_roles']);
     });
 
-    Route::prefix('category')->group(function(){
-
+    Route::prefix('category')->group(function () {
+        Route::get('/', [CategoryController::class, 'index']);
+        Route::get('/{id}', [CategoryController::class, 'show']);
+        Route::post('/', [CategoryController::class, 'store']);
+        Route::put('/{id}', [CategoryController::class, 'update']);
+        Route::delete('/{id}', [CategoryController::class, 'destroy']);
     });
 
     Route::prefix('post')->group(function(){
@@ -58,7 +65,13 @@ Route::middleware('auth:sanctum')->group(function(){
     });
 
     Route::prefix('topics')->group(function(){
-        
+        Route::get('/', [TopicController::class, 'index'])->name('topics.index'); 
+        Route::post('/', [TopicController::class, 'store'])->name('topics.store'); 
+        Route::get('/{id}', [TopicController::class, 'show'])->name('topics.show'); 
+        Route::put('/{id}', [TopicController::class, 'update'])->name('topics.update'); 
+        Route::delete('/{id}', [TopicController::class, 'destroy'])->name('topics.destroy');
+        Route::get('/category/{categoryId}', [TopicController::class, 'getByCategory'])->name('topics.byCategory');
+
     });
 
     Route::prefix('upload_media')->group(function(){
