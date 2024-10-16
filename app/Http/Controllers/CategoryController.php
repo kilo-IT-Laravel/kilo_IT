@@ -61,24 +61,43 @@ class CategoryController extends Controller
         }
     }
 
+    // 
+    
+
     public function update(int $id): JsonResponse
     {
         try {
+
             $validatedData = $this->req->validate([
-                'name' => 'required|max:255',
-                'icon' => 'required|max:500',
+                'name' => 'sometimes|required|max:255',
+                'icon' => 'sometimes|required|max:500',
             ]);
 
-            $validatedData['slug'] = Str::slug($validatedData['name']);
+            if (!$validatedData) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'At least one of name or icon must be provided.'
+                ], 422);
+            }
 
-            $updated = $this->Repository->updateCategory($id, $validatedData);
-            if (!$updated) {
+            $validatedData['slug'] = $validatedData['name'] ?? null ? Str::slug($validatedData['name']) : null;
+
+            if (!$this->Repository->updateCategory($id, array_filter($validatedData))) {
                 return response()->json(['message' => 'Category not found'], 404);
             }
-            $category = $this->Repository->getCategoryById($id);
-            return response()->json(['success' => true, 'message' => 'Successfully updated category', 'data' => new CategoryResource($category)], 200);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully updated category',
+                'data' => new CategoryResource($this->Repository->getCategoryById($id))
+            ], 200);
+
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Error updating category', 'err' => $e->getMessage()], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating category',
+                'err' => $e->getMessage()
+            ], 500);
         }
     }
 

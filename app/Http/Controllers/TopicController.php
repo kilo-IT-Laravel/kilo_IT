@@ -59,22 +59,59 @@ class TopicController extends Controller
         }
     }
 
+    // public function update(int $id): JsonResponse
+    // {
+    //     try {
+    //         $validatedData = $this->req->validate([
+    //             'name' => 'required|max:255',
+    //             'category_id' => 'required|exists:categories,id',
+    //         ]);
+
+    //         $updated = $this->Repository->updateTopic($id, $validatedData);
+    //         if (!$updated) {
+    //             return response()->json(['message' => 'Topic not found'], 404);
+    //         }
+    //         $topic = $this->Repository->getTopicById($id);
+    //         return response()->json(['success' => true, 'message' => 'Successfully updated topic data', 'data' => new TopicResource($topic)], 200);
+    //     } catch (Exception $e) {
+    //         return response()->json(['success' => false, 'message' => 'Error updating topic', 'err' => $e->getMessage()], 500);
+    //     }
+    // }
+
     public function update(int $id): JsonResponse
     {
         try {
+            
             $validatedData = $this->req->validate([
                 'name' => 'required|max:255',
                 'category_id' => 'required|exists:categories,id',
+            ], [
+                'name.required' => 'The topic name is required.',
+                'name.max' => 'The topic name must not exceed 255 characters.',
+                'category_id.required' => 'The category ID is required.',
+                'category_id.exists' => 'The selected category does not exist.',
             ]);
 
             $updated = $this->Repository->updateTopic($id, $validatedData);
+
             if (!$updated) {
                 return response()->json(['message' => 'Topic not found'], 404);
             }
+
             $topic = $this->Repository->getTopicById($id);
-            return response()->json(['success' => true, 'message' => 'Successfully updated topic data', 'data' => new TopicResource($topic)], 200);
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully updated topic data',
+                'data' => new TopicResource($topic)
+            ], 200);
+
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Error updating topic', 'err' => $e->getMessage()], 500);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating topic',
+                'err' => $e->getMessage()
+            ], 500);
         }
     }
 

@@ -2,6 +2,7 @@
 
 use App\Events\testing;
 use App\Http\Controllers\Auth\authenticate;
+use App\Http\Controllers\TopicController;
 use App\Http\Controllers\UserManagement;
 use App\TestMethod\SwitchMe;
 use Illuminate\Http\Request;
@@ -54,7 +55,13 @@ Route::middleware('auth:sanctum')->group(function(){
     });
 
     Route::prefix('topics')->group(function(){
-        
+        Route::get('/', [TopicController::class, 'index'])->name('topics.index'); 
+        Route::post('/', [TopicController::class, 'store'])->name('topics.store'); 
+        Route::get('/{id}', [TopicController::class, 'show'])->name('topics.show'); 
+        Route::put('/{id}', [TopicController::class, 'update'])->name('topics.update'); 
+        Route::delete('/{id}', [TopicController::class, 'destroy'])->name('topics.destroy');
+        Route::get('/category/{categoryId}', [TopicController::class, 'getByCategory'])->name('topics.byCategory');
+
     });
 
     Route::prefix('upload_media')->group(function(){

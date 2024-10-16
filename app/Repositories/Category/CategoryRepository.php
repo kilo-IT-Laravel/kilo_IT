@@ -1,12 +1,11 @@
 <?php
-
 namespace App\Repositories\Category;
 
 use App\Models\Category;
-use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Log;
+use Exception;
 
 class CategoryRepository implements CategoryInterface
 {
@@ -67,4 +66,18 @@ class CategoryRepository implements CategoryInterface
             throw new Exception('Error deleting category');
         }
     }
+
+    public function getcategoryBySlug(string $slug): ?Category
+    {
+        try {
+            return Category::where('slug', $slug)->firstOrFail();
+        } catch (ModelNotFoundException $e) {
+            return null;
+        } catch (Exception $e) {
+            Log::error('Database error: ' . $e->getMessage());
+            throw new Exception('Error retrieving category by slug');
+        }
+    }
+
+
 }
