@@ -7,6 +7,7 @@ use App\TestMethod\SwitchMe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use App\Repositories\SiteSettings\SiteSettingController;
 
 Route::post('/register',[authenticate::class , 'register']);
 Route::post('/login',[authenticate::class , 'login']);
@@ -35,6 +36,8 @@ Route::middleware('auth:sanctum')->group(function(){
         Route::delete('/{userId}/force-delete', [UserManagement::class, 'ForceDeleteUser'])->middleware(['role:super_admin' , 'permission:delete_roles']);
         Route::get('/auditlog/{userId}' , [UserManagement::class , 'getAuditLogs'])->middleware(['role:super_admin' , 'permission:delete_roles']);
     });
+   
+
 
     Route::prefix('category')->group(function(){
 
@@ -56,8 +59,12 @@ Route::middleware('auth:sanctum')->group(function(){
 
     });
 
-    Route::prefix('site_settings')->group(function(){
-
+    Route::prefix('site_settings')->group(function () {
+        Route::get('settings', [SiteSettingController::class, 'index'])->middleware(['role:super_admin', 'permission:view_items']);
+        Route::get('settings/{key}', [SiteSettingController::class, 'show'])->middleware(['role:super_admin', 'permission:view_items']);
+        Route::put('settings/{key}', [SiteSettingController::class, 'update'])->middleware(['role:super_admin', 'permission:update_items']);
+        Route::post('settings', [SiteSettingController::class, 'store'])->middleware(['role:super_admin', 'permission:create_items']);
+        Route::delete('settings/{key}', [SiteSettingController::class, 'destroy'])->middleware(['role:super_admin', 'permission:delete_items']);
     });
 });
 
