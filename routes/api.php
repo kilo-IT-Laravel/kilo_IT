@@ -78,9 +78,3 @@ Route::post('/msg',function(Request $req){
     ]);
 });
 
-//Route::get('/read_image',function(){
-
-    //$url = Storage::disk('s3')->temporaryUrl('images/qDzvxaOoXGMQCcxZ1WEXOC4dDDvPO1MQtMc0gYWK.jpg',now()->addHours(5));
-
-    //return response()->json(['url' => $url]);
-//});
