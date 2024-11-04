@@ -14,6 +14,13 @@ use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Password;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+
+use App\Mail\PasswordReset;
 
 class UserManagement extends Controller
 {
@@ -197,5 +204,111 @@ class UserManagement extends Controller
         } catch (Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+
+    // admin change password for users
+
+    public function resetPasswordByAdmin(Request $request, int $userId)
+    {
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+
+        $updatedUser = $this->Repository->resetPasswordByAdmin($userId, $request->password);
+
+        return response()->json([
+            'message' => 'Password updated successfully',
+            'user' => $updatedUser->only(['id', 'name', 'email']),
+        ], 200);
+    }
+
+
+    // Handle Change Password Request
+    public function changePassword(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|confirmed|min:8',
+        ]);
+
+        try {
+            $this->Repository->changePassword($request->user(), $data);
+            return redirect()->route('user.dashboard')->with('status', 'Password changed successfully!');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+
+        $otpKey = "password_reset_otp_" . $request->email;
+
+        if (!Cache::has($otpKey)) {
+            return response()->json(['message' => 'OTP verification required.'], 422);
+        }
+
+
+        $user = \App\Models\User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        $user->password = bcrypt($request->password);
+        $user->save();
+
+        return response()->json(['message' => 'Password has been reset successfully.']);
+    }
+
+
+
+
+
+    public function sendOtp(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $email = $request->email;
+        $otp = rand(100000, 999999);
+        $otpKey = "password_reset_otp_" . $email;
+
+
+        Cache::put($otpKey, $otp, now()->addMinutes(5));
+
+        Mail::to($email)->send(new PasswordReset($otp));
+
+        return response()->json(['message' => 'OTP has been sent to your email.']);
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|digits:6',
+        ]);
+
+        $otpKey = "password_reset_otp_" . $request->email;
+        $cachedOtp = Cache::get($otpKey);
+
+        if ($cachedOtp && $cachedOtp == $request->otp) {
+            Cache::forget($otpKey);
+
+            return response()->json(['message' => 'OTP verified. You can now reset your password.']);
+        }
+
+        return response()->json(['message' => 'Invalid or expired OTP.'], 422);
     }
 }

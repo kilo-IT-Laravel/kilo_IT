@@ -13,12 +13,28 @@ use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\UploadMediaController;
 use App\Http\Controllers\UserManagement;
+use App\Models\categorie;
 use App\TestMethod\SwitchMe;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use App\Models\Post; 
+
 
 Route::post('/register', [authenticate::class, 'register']);
 Route::post('/login', [authenticate::class, 'login']);
+
+Route::post('/send-otp', [UserManagement::class, 'sendOtp'])->name('password.sendOtp');
+Route::post('/verify-otp', [UserManagement::class, 'verifyOtp'])->name('password.verifyOtp');
+Route::post('/reset-password', [UserManagement::class, 'resetPassword'])->name('password.resetPassword');
+
+
+// Route::prefix('frontend')->group(function(){
+//     Route::get('',function{
+
+//     })->middleware('auth:sanctum')
+// });
+
 
 Route::middleware('auth:sanctum')->group(function () {
     ///// public routes
@@ -29,13 +45,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('popular/posts', [PostController::class , 'popularPosts'])->middleware('permission:view_items');
     Route::get('posts/{id}', [PostController::class, 'publicShow'])->middleware('permission:view_items');
     Route::post('posts/{postId}/view', [PostViewController::class, 'recordView'])->middleware('permission:view_items');
-    Route::post('/{id}/like', [PostController::class, 'like'])->middleware('permission:view_items');
-    Route::delete('/{id}/like', [PostController::class, 'unlike'])->middleware('permission:view_items');
     Route::get('/popular/topics' , [TopicController::class , 'popularTopics'])->middleware('permission:view_items');
     Route::get('/allsettings' , [SiteSettingController::class , 'homepageSettings'])->middleware('permission:view_items');
     Route::get('/setting/{key}' , [SiteSettingController::class , 'homepageSetting'])->middleware('permission:view_items');
     Route::get('/related_posts/{postId}' , [PostController::class , 'getRelatedPosts'])->middleware('permission:view_items');
     Route::get('/popularCategory' , [CategoryController::class , 'getPopularCategory'])->middleware('permission:view_items');
+    Route::post('/{id}/like', [PostController::class, 'toggleLike'])->middleware('permission:view_items');
+
+    Route::middleware(['auth', 'role:admin'])->group(function () {
+      
+       Route::post('/admin/reset-password/{user}', [UserManagement::class, 'resetPassword'])->name('admin.reset-password.post');
+    });
+
+   
+
 
     Route::get('/testView', function () {
         $test = new SwitchMe();
@@ -176,6 +199,36 @@ Route::post('/msg', function (Request $req) {
     ]);
 });
 
+
+Route::get('/search', function (Request $request) {
+    $title = $request->input('title');
+    $limit = $request->input('limit', 10);  
+    $page = $request->input('page', 1);     
+
+    $data = Categorie::select('id', 'name', 'icon', 'slug')
+        ->with([
+            'posts' => function ($query) use ($title) {
+                $query->select('title')
+                    ->where('title', 'like', '%' . $title . '%')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(1);
+            },
+        ])
+        ->withCount('posts')
+        ->distinct()
+        ->addSelect([
+            'average_likes' => Post::select(DB::raw('AVG(likes)'))
+                ->limit(1),
+            'average_views' => Post::select(DB::raw('AVG(views)'))
+                ->whereColumn('category_id', 'categories.id')
+                ->limit(1),
+        ])
+        ->paginate($limit, ['*'], 'page', $page); 
+
+    return response()->json([
+        'data' => $data
+    ]);
+});
 
 
 //Route::get('/read_image',function(){

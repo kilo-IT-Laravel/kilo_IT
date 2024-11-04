@@ -3,6 +3,7 @@
 namespace App\Repositories\Posts;
 
 use App\Models\post;
+use App\Models\post_view;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -29,4 +30,6 @@ interface PostInterface
     public function forceDeletePost(int $postId): bool;
     public function getRelatedPosts(int $postId, int $limit = 3): Collection;
     public function getPopularPosts(int $limit = 10 , int $days = 30): Collection;
+   
+  //  public function toggleLike(int $postId, int $userId): bool;
 }

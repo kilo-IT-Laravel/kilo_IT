@@ -21,7 +21,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class UserController implements UserInterface
 {
@@ -251,4 +253,45 @@ class UserController implements UserInterface
             throw new Exception('Error rolling back delete: ' . $e->getMessage());
         }
     }
-}
+
+    public function resetPasswordByAdmin(int $userId, string $newPassword): User
+    {
+        $user = User::findOrFail($userId); 
+        $user->password = Hash::make($newPassword);  
+        $user->save();  
+
+        return $user;  
+    }
+
+
+    public function changePassword($user, array $data)
+    {
+        // Verify current password
+        if (!Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages(['current_password' => 'Your current password does not match our records.']);
+        }
+
+        // Update password
+        $user->password = Hash::make($data['new_password']);
+        $user->save();
+
+        return $user;
+    }
+
+    public function sendResetLink(array $data)
+    {
+        return Password::sendResetLink($data);
+    }
+    public function resetPasswordWithToken(array $data)
+    {
+        return Password::reset($data, function ($user, $password) {
+            $user->password = bcrypt($password);
+            $user->save();
+        });
+    }
+
+    
+   
+}   
+
+

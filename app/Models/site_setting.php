@@ -15,3 +15,4 @@ class site_setting extends Model
         'input_type' => 'string',
     ];
 }
+

@@ -139,6 +139,7 @@ class PostController extends Controller
             $post = $this->Repository->getPostByIdForPublic($id);
             $strategy = $this->getContentStrategy($post->content_type);
             $post->rendered_content = $strategy->renderContent($post->content);
+           
             return response()->json([
                 'success' => true,
                 'message' => 'Successfully retrieved post',
@@ -223,29 +224,29 @@ class PostController extends Controller
         }
     }
 
-    public function like(int $id): JsonResponse
-    {
-        try {
-            $this->Repository->addLike($id, $this->req->user()->id);
-            return response()->json(['success' => true, 'message' => 'Post liked successfully'], 200);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-        }
-    }
+    // public function like(int $id): JsonResponse
+    // {
+    //     try {
+    //         $this->Repository->addLike($id, $this->req->user()->id);
+    //         return response()->json(['success' => true, 'message' => 'Post liked successfully'], 200);
+    //     } catch (ModelNotFoundException $e) {
+    //         return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+    //     } catch (Exception $e) {
+    //         return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    //     }
+    // }
 
-    public function unlike(int $id): JsonResponse
-    {
-        try {
-            $this->Repository->removeLike($id, $this->req->user()->id);
-            return response()->json(['success' => true, 'message' => 'Post unliked successfully'], 200);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-        }
-    }
+    // public function unlike(int $id): JsonResponse
+    // {
+    //     try {
+    //         $this->Repository->removeLike($id, $this->req->user()->id);
+    //         return response()->json(['success' => true, 'message' => 'Post unliked successfully'], 200);
+    //     } catch (ModelNotFoundException $e) {
+    //         return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+    //     } catch (Exception $e) {
+    //         return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    //     }
+    // }
 
     public function destroy(int $id): JsonResponse
     {
@@ -309,4 +310,34 @@ class PostController extends Controller
             default => throw new InvalidArgumentException("Unsupported content type: $contentType")
         };
     }
+
+    public function toggleLike(int $id, Request $request): JsonResponse
+    {
+        try {
+            // Find the post
+            $post = Post::findOrFail($id);
+            $user = $request->user(); // Get the authenticated user
+
+            // Check if the user has already liked the post
+            if ($post->likes()->where('user_id', $user->id)->exists()) {
+                // If liked, detach (unlike)p
+                $post->likes()->detach($user->id);
+                $post->decrement('likes');
+
+                return response()->json(['success' => true, 'message' => 'Post unliked successfully'], 200);
+            } else {
+                // If not liked, attach (like)
+                $post->likes()->attach($user->id);
+                $post->increment('likes');
+                return response()->json(['success' => true, 'message' => 'Post liked successfully'], 200);
+            }
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+
+    
 }

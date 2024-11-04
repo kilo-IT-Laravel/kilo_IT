@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
+
 class PostController implements PostInterface
 {
 
@@ -46,7 +47,7 @@ class PostController implements PostInterface
             $filters = $req->only(['search', 'categorie_id', 'author_id']);
 
             $query = Post::query()
-                ->select('posts.id', 'posts.title' , 'posts.description' , 'posts.thumbnail', 'posts.published_at', 'posts.views', 'posts.likes', 'posts.created_at', 'posts.category_id', 'posts.author_id')
+                ->select('posts.id', 'posts.title', 'posts.description', 'posts.thumbnail', 'posts.published_at', 'posts.views', 'posts.likes', 'posts.created_at', 'posts.category_id', 'posts.author_id')
                 ->with([
                     'category:id,name',
                     'author:id,name'
@@ -232,7 +233,7 @@ class PostController implements PostInterface
             return DB::transaction(function () use ($id, $req) {
                 $post = post::findOrFail($id);
 
-                $data = $req->only(['title', 'description', 'content', 'category_id', 'content_type', 'thumbnail' , 'upload_media_id']);
+                $data = $req->only(['title', 'description', 'content', 'category_id', 'content_type', 'thumbnail', 'upload_media_id']);
 
                 if ($req->has('content')) {
                     $postData['read_time'] = $this->calculateReadTime($req->content);
@@ -558,5 +559,9 @@ class PostController implements PostInterface
             'html' => new HtmlStrategy(),
             default => throw new InvalidArgumentException("Unsupported content type: $contentType")
         };
-    }
+    }   
+
+    
+
+   
 }

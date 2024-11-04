@@ -22,7 +22,7 @@ class topicFactory extends Factory
     {
         return [
             'name' => fake()->unique()->words(3, true),
-            'category_id' => categorie::factory(),
+            'categorie_id' => categorie::factory(),
         ];
     }
 }

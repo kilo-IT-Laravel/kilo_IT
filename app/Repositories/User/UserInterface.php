@@ -19,4 +19,10 @@ interface UserInterface {
     public function editUserInfo(Request $req):User;
     public function getAuditLogs(int $userId, int $perPage = 10): LengthAwarePaginator;
     public function rollbackDelete(int $logId): bool;
+
+    public function resetPasswordByAdmin(int $userId, string $newPassword): User;
+    public function changePassword($user, array $data);
+    public function sendResetLink(array $data);
+    public function resetPasswordWithToken(array $data);
+    
 }
