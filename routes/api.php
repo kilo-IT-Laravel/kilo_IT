@@ -9,11 +9,12 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\postPhotosController;
 use App\Http\Controllers\PostViewController;
 use App\Http\Controllers\RoleController;
-use App\Http\Controllers\SiteSettingController;
+use App\Http\Controllers\SiteSettings;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\UploadMediaController;
 use App\Http\Controllers\UserManagement;
 use App\Models\categorie;
+use App\Repositories\SiteSettings\SiteSettingController;
 use App\TestMethod\SwitchMe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -106,40 +107,21 @@ Route::middleware('auth:sanctum')->group(function () {
    
 
     Route::prefix('site_settings')->group(function () {
-        Route::get('/', [SiteSettingController::class, 'index'])->middleware(['role:super_admin', 'permission:view_items']);
-        Route::get('/{key}', [SiteSettingController::class, 'show'])->middleware(['role:super_admin', 'permission:view_items']);
-        Route::put('/{key}', [SiteSettingController::class, 'update'])->middleware(['role:super_admin', 'permission:update_items']);
-        Route::post('/', [SiteSettingController::class, 'store'])->middleware(['role:super_admin', 'permission:create_items']);
-        Route::delete('/{key}', [SiteSettingController::class, 'destroy'])->middleware(['role:super_admin', 'permission:delete_items']);
+        Route::get('settings', [SiteSettingController::class, 'getAllSettings'])
+            ->middleware(['role:super_admin', 'permission:view_items']);
+    
+        Route::get('settings/{key}', [SiteSettingController::class, 'getSetting'])
+            ->middleware(['role:super_admin', 'permission:view_items']);
+    
+        Route::put('settings/{key}', [SiteSettingController::class, 'updateSetting'])
+            ->middleware(['role:super_admin', 'permission:update_items']);
+    
+        Route::post('settings', [SiteSettingController::class, 'createSetting'])
+            ->middleware(['role:super_admin', 'permission:create_items']);
+    
+        Route::delete('settings/{key}', [SiteSettingController::class, 'deleteSetting'])
+            ->middleware(['role:super_admin', 'permission:delete_items']);
     });
+
 });
 
-
-//////////////////reverb
-Route::post('/msg', function (Request $req) {
-    $bruh = $req->message;
-    event(new testing($bruh));
-    return response()->json([
-        'msg' => $bruh
-    ]);
-});
-
-//Route::get('/read_image',function(){
-
-    //$url = Storage::disk('s3')->temporaryUrl('images/qDzvxaOoXGMQCcxZ1WEXOC4dDDvPO1MQtMc0gYWK.jpg',now()->addHours(5));
-
-    //return response()->json(['url' => $url]);
-//});
-
-Route::get('/test' , function(){
-    return [
-        'data' => Categorie::withCount(['posts as total_likes' => function($query) {
-            $query->select(DB::raw('sum(likes)'));
-        }])->withSum('posts', 'views')
-        ->with(['posts'=>function($query){
-            $query->select('id','title','category_id',DB::raw('sum(views) as total_views'))
-            ->where('title' , 'chainsaw man is awsome <3')
-            ->with('views')->groupBy('id','title','category_id');
-        }])->select(DB::raw('min(id) as id') , 'name')->groupBy('name')->get()
-    ];
-});

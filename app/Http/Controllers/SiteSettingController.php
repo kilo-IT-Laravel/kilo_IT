@@ -1,129 +1,211 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Repositories\SiteSettings;
 
-use App\Repositories\SiteSettings\SiteSettingInterface;
-use App\Services\SiteSettingsService;
+
+use App\Services\AuditLogService;
 use Exception;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use App\Models\SiteSetting;
 
-class SiteSettingController extends Controller
+
+class SiteSettingController implements SiteSettingInterface
 {
-    private Request $req;
+    protected $logService;
 
-    protected $Repository;
-
-    protected $siteSettingsService;
-
-    public function __construct(SiteSettingInterface $repository, Request $req, SiteSettingsService $siteSettingsService)
+    public function __construct(AuditLogService $logService)
     {
-        $this->req = $req;
-        $this->Repository = $repository;
-        $this->siteSettingsService = $siteSettingsService;
+        $this->logService = $logService;
     }
 
-    public function index(): JsonResponse
+    public function getAllSettings(string $search = null, int $perPage = 10): LengthAwarePaginator
     {
         try {
+            return Cache::remember('site_settings', 3600, function () use ($search, $perPage) {
+                $query = SiteSetting::query()
+                    ->when($search, function ($query) use ($search) {
+                        return $query->where('name', 'LIKE', "%{$search}%");
+                    })
+                    ->orderBy('created_at', 'desc');
 
-            $search = $this->req->search;
-            $perPage = $this->req->per_page ?? 10;
-
-            $settings = $this->Repository->getAllSettings($search, $perPage);
-            return response()->json(['success' => true, 'message' => 'Successfully retrieving settings', 'data' => $settings], 200);
+                return $query->paginate($perPage);
+            });
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            Log::error('Error retrieving all settings: ' . $e->getMessage());
+            throw new Exception('Error retrieving all settings');
         }
     }
 
-    public function show(string $key): JsonResponse
+    public function getSetting(string $key): array
     {
         try {
-            $setting = $this->Repository->getSetting($key);
+            $setting = Cache::remember("site_setting_{$key}", 3600, function () use ($key) {
+                return SiteSetting::where('key', $key)->first();
+            });
+
             if (!$setting) {
-                return response()->json(['message' => 'Setting not found'], 404);
+                throw new ModelNotFoundException('Setting not found');
             }
-            return response()->json(['success' => true, 'message' => 'Successfully retrieving setting', 'data' => $setting], 200);
+
+            return [
+                'success' => true,
+                'data' => [
+                    'key' => $setting->key,
+                    'value' => $setting->value,
+                    'input_type' => $setting->input_type
+                ]
+            ];
         } catch (ModelNotFoundException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+            return [
+                'success' => false,
+                'message' => 'Setting not found'
+            ];
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            Log::error('Error retrieving setting: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error retrieving setting'
+            ];
         }
     }
 
-    public function update(string $key): JsonResponse
+    public function updateSetting(string $key, Request $req): array
     {
+        // Validate the request
+        $req->validate([
+            'name' => 'required|string',
+            'input_type' => 'required|string',
+            'value' => 'nullable|string', // If not using an image
+            'image' => 'nullable|image|max:2048' // Optional image upload
+        ]);
+
         try {
-            $this->req->validate([
-                'name' => 'sometimes|string',
-                'value' => 'sometimes|string',
-                'input_type' => 'sometimes|in:text,number,date,boolean,image',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            ]);
-
-            $this->Repository->updateSetting($key, $this->req);
-
-            return response()->json(['success' => true, 'message' => 'Setting updated successfully'], 200);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-        }
-    }
-
-    public function store(): JsonResponse
-    {
-        try {
-            $this->req->validate([
-                'key' => 'required|string|unique:site_settings,key',
-                'name' => 'required|string',
-                'value' => 'required_without:image|string',
-                'input_type' => 'required|in:text,number,date,boolean,image',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            ]);
-
-            $setting = $this->Repository->createSetting($this->req);
-            return response()->json(['success' => true, 'message' => 'Successfully created setting', 'data' => $setting], 201);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-        }
-    }
-
-    public function destroy(string $key): JsonResponse
-    {
-        try {
-            $deleted = $this->Repository->deleteSetting($key);
-            if (!$deleted) {
-                return response()->json(['message' => 'Setting not found'], 404);
+            $setting = SiteSetting::where('key', $key)->first();
+            if (!$setting) {
+                return [
+                    'success' => false,
+                    'message' => 'Setting not found'
+                ];
             }
-            return response()->json(['success' => true, 'message' => 'Failed to delete setting'], 204);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-        }
-    }
 
-    public function homepageSettings(): JsonResponse
-    {
-        try {
-            $settings = $this->siteSettingsService->getAllSettings();
-            return response()->json(['success' => true, 'data' => $settings]);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-        }
-    }
+            $data = [
+                'name' => $req->name,
+                'input_type' => $req->input_type
+            ];
 
-    public function homepageSetting(string $key): JsonResponse
-    {
-        try {
-            $value = $this->siteSettingsService->getSetting($key);
-            if ($value === null) {
-                return response()->json(['message' => 'Setting not found'], 404);
+            if ($req->hasFile('image')) {
+                Storage::disk('s3')->delete($setting->value);
+                $data['value'] = $req->file('image')->store('site_image', 's3');
+            } else {
+                $data['value'] = $req->value;
             }
-            return response()->json(['success' => true, 'data' => [$key => $value]]);
+
+            $setting->update(array_filter($data));
+            Cache::forget("site_setting_{$key}"); // Clear cache for this setting
+            Cache::forget('site_settings'); // Clear all settings cache
+
+            $this->logService->log(Auth::id(), 'updated_setting', SiteSetting::class, $setting->id, json_encode([
+                'key' => $key,
+                'old_value' => $setting->getOriginal('value'),
+                'new_value' => $data['value']
+            ]));
+
+            return [
+                'success' => true,
+                'data' => [
+                    'key' => $setting->key,
+                    'value' => $setting->value,
+                    'input_type' => $setting->input_type
+                ]
+            ];
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            Log::error('Error updating setting: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error updating setting'
+            ];
         }
     }
+
+    public function createSetting(Request $req): array
+    {
+        // Validate the request
+        $req->validate([
+            'key' => 'required|string|unique:site_settings,key',
+            'name' => 'required|string',
+            'input_type' => 'required|string',
+            'value' => 'nullable|string',
+            'image' => 'nullable|image|max:2048' // Optional image upload
+        ]);
+
+        try {
+            $data = [
+                'key' => $req->key,
+                'name' => $req->name,
+                'value' => $req->hasFile('image') ? $req->file('image')->store('site_image', 's3') : $req->value,
+                'input_type' => $req->input_type
+            ];
+
+            $setting = SiteSetting::create($data);
+            Cache::forget('site_settings'); // Clear all settings cache
+
+            $this->logService->log(Auth::id(), 'created_setting', SiteSetting::class, $setting->id, json_encode($data));
+
+            return [
+                'success' => true,
+                'data' => [
+                    'key' => $setting->key,
+                    'value' => $setting->value,
+                    'input_type' => $setting->input_type
+                ]
+            ];
+        } catch (Exception $e) {
+            Log::error('Error creating setting: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error creating setting'
+            ];
+        }
+    }
+
+    public function deleteSetting(string $key): array
+    {
+        try {
+            $setting = SiteSetting::where('key', $key)->first();
+            if (!$setting) {
+                return [
+                    'success' => false,
+                    'message' => 'Setting not found'
+                ];
+            }
+
+            $setting->delete();
+            Cache::forget("site_setting_{$key}"); // Clear cache for this setting
+            Cache::forget('site_settings'); // Clear all settings cache
+
+            $this->logService->log(Auth::id(), 'deleted_setting', SiteSetting::class, $setting->id, json_encode([
+                'model' => get_class($setting),
+                'key' => $setting->key,
+            ]));
+
+            return [
+                'success' => true,
+                'message' => 'Setting deleted successfully'
+            ];
+        } catch (Exception $e) {
+            Log::error('Error deleting setting: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error deleting setting'
+            ];
+        }
+    }
+
+   
 }

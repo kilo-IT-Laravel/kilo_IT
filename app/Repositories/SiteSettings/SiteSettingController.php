@@ -2,7 +2,7 @@
 
 namespace App\Repositories\SiteSettings;
 
-use App\Models\site_setting;
+use App\Models\SiteSetting;
 use App\Services\AuditLogService;
 use Exception;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\Storage;
 
 class SiteSettingController implements SiteSettingInterface
 {
-
     protected $logService;
 
     public function __construct(AuditLogService $logService)
@@ -26,41 +25,75 @@ class SiteSettingController implements SiteSettingInterface
     public function getAllSettings(string $search = null, int $perPage = 10): LengthAwarePaginator
     {
         try {
-            $query = site_setting::query()
-                ->when($search, function ($query, $search) {
-                    return $query->where('name', 'LIKE', "%{$search}%");
-                })->orderBy('created_at', 'desc');
-            return $query->latest()->paginate($perPage);
+            return Cache::remember('site_settings', 3600, function () use ($search, $perPage) {
+                $query = SiteSetting::query()
+                    ->when($search, function ($query) use ($search) {
+                        return $query->where('name', 'LIKE', "%{$search}%");
+                    })
+                    ->orderBy('created_at', 'desc');
+
+                return $query->paginate($perPage);
+            });
         } catch (Exception $e) {
             Log::error('Error retrieving all settings: ' . $e->getMessage());
             throw new Exception('Error retrieving all settings');
         }
     }
 
-    public function getSetting(string $key): ?site_setting
+    public function getSetting(string $key): array
     {
         try {
-            return site_setting::where('key', $key)->first();
+            $setting = Cache::remember("site_setting_{$key}", 3600, function () use ($key) {
+                return SiteSetting::where('key', $key)->first();
+            });
+
+            if (!$setting) {
+                throw new ModelNotFoundException('Setting not found');
+            }
+
+            return [
+                'success' => true,
+                'data' => [
+                    'key' => $setting->key,
+                    'value' => $setting->value,
+                    'input_type' => $setting->input_type,
+                ],
+            ];
         } catch (ModelNotFoundException $e) {
-            throw new Exception('Setting not found');
+            return [
+                'success' => false,
+                'message' => 'Setting not found',
+            ];
         } catch (Exception $e) {
             Log::error('Error retrieving setting: ' . $e->getMessage());
-            throw new Exception('Error retrieving setting');
+            return [
+                'success' => false,
+                'message' => 'Error retrieving setting',
+            ];
         }
     }
 
-    public function updateSetting(string $key, Request $req): bool
+    public function updateSetting(string $key, Request $req): array
     {
+        $req->validate([
+            'name' => 'required|string',
+            'input_type' => 'required|string',
+            'value' => 'nullable|string',
+            'image' => 'nullable|image|max:2048',
+        ]);
+
         try {
-            $setting = site_setting::where('key', $key)->first();
+            $setting = SiteSetting::where('key', $key)->first();
             if (!$setting) {
-                return false;
+                return [
+                    'success' => false,
+                    'message' => 'Setting not found',
+                ];
             }
-            $oldValue = $setting->value;
 
             $data = [
                 'name' => $req->name,
-                'input_type' => $req->input_type
+                'input_type' => $req->input_type,
             ];
 
             if ($req->hasFile('image')) {
@@ -70,48 +103,57 @@ class SiteSettingController implements SiteSettingInterface
                 $data['value'] = $req->value;
             }
 
-            $data = array_filter($data);
+            $setting->update(array_filter($data));
+            Cache::forget("site_setting_{$key}");
+            Cache::forget('site_settings');
 
-            $updated = $setting->update($data);
-            if ($updated) {
-                $this->logService->log(Auth::id(), 'updated_setting', site_setting::class, $setting->id, json_encode([
-                    'key' => $key,
-                    'old_value' => $oldValue,
-                    'new_value' => $req->value
-                ]));
-            }
-            return $updated;
-        } catch (ModelNotFoundException $e) {
-            throw new Exception('site_setting not found');
+            $this->logService->log(Auth::id(), 'updated_setting', SiteSetting::class, $setting->id, json_encode([
+                'key' => $key,
+                'old_value' => $setting->getOriginal('value'),
+                'new_value' => $data['value'],
+            ]));
+
+            return [
+                'success' => true,
+                'data' => [
+                    'key' => $setting->key,
+                    'value' => $setting->value,
+                    'input_type' => $setting->input_type,
+                ],
+            ];
         } catch (Exception $e) {
             Log::error('Error updating setting: ' . $e->getMessage());
-            throw new Exception('Error updating setting');
+            return [
+                'success' => false,
+                'message' => 'Error updating setting',
+            ];
         }
     }
 
-    public function createSetting(Request $req): site_setting
+    public function createSetting(Request $req): array
     {
+        $req->validate([
+            'key' => 'required|string|unique:site_settings,key',
+            'name' => 'required|string',
+            'input_type' => 'required|string',
+            'value' => 'nullable|string',
+            'image' => 'nullable|image|max:2048',
+        ]);
+
         try {
             $data = [
                 'key' => $req->key,
                 'name' => $req->name,
                 'value' => $req->hasFile('image') ? $req->file('image')->store('site_image', 's3') : $req->value,
-                'input_type' => $req->input_type
+                'input_type' => $req->input_type,
             ];
 
-            $setting = site_setting::create($data);
-            $this->logService->log(Auth::id(), 'created_setting', site_setting::class, $setting->id, json_encode($data));
-            return $setting;
-        } catch (Exception $e) {
-            Log::error('Error creating setting: ' . $e->getMessage());
-            throw new Exception('Error creating setting');
-        }
-    }
+            $setting = SiteSetting::create($data);
+            Cache::forget('site_settings');
 
-    public function deleteSetting(string $key): bool
-    {
-        try {
+            $this->logService->log(Auth::id(), 'created_setting', SiteSetting::class, $setting->id, json_encode($data));
 
+<<<<<<< HEAD
             $setting = site_setting::where('key', $key)->first();
             if (!$setting) {
                 return false;
@@ -154,32 +196,55 @@ class SiteSettingController implements SiteSettingInterface
                     return null;
                 }
                 return [
+=======
+            return [
+                'success' => true,
+                'data' => [
+>>>>>>> 69d4952ca1121aadecae85ff38dccb24bd5757d6
                     'key' => $setting->key,
                     'value' => $setting->value,
-                    'input_type' => $setting->input_type
-                ];
-            });
+                    'input_type' => $setting->input_type,
+                ],
+            ];
         } catch (Exception $e) {
-            Log::error('Error finding setting by key: ' . $e->getMessage());
-            throw new Exception('Error finding setting by key');
+            Log::error('Error creating setting: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error creating setting',
+            ];
         }
     }
 
-    public function getSettings(): array
+    public function deleteSetting(string $key): array
     {
         try {
-            return Cache::remember('all_site_settings', 3600, function () {
-                return site_setting::all()->map(function ($setting) {
-                    return [
-                        'key' => $setting->key,
-                        'value' => $setting->value,
-                        'input_type' => $setting->input_type
-                    ];
-                })->keyBy('key')->toArray();
-            });
+            $setting = SiteSetting::where('key', $key)->first();
+            if (!$setting) {
+                return [
+                    'success' => false,
+                    'message' => 'Setting not found',
+                ];
+            }
+
+            $setting->delete();
+            Cache::forget("site_setting_{$key}");
+            Cache::forget('site_settings');
+
+            $this->logService->log(Auth::id(), 'deleted_setting', SiteSetting::class, $setting->id, json_encode([
+                'model' => get_class($setting),
+                'key' => $setting->key,
+            ]));
+
+            return [
+                'success' => true,
+                'message' => 'Setting deleted successfully',
+            ];
         } catch (Exception $e) {
-            Log::error('Error finding setting by key: ' . $e->getMessage());
-            throw new Exception('Error finding setting by key');
+            Log::error('Error deleting setting: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error deleting setting',
+            ];
         }
     }
 }

@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class site_setting extends Model
+class Sitesetting extends Model
 {
     use HasFactory;
 
