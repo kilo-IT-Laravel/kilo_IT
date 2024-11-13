@@ -214,6 +214,7 @@ class UserController implements UserInterface
             return AuditLogs::where('user_id', $userId)
                 ->orderBy('created_at', 'desc')
                 ->paginate($perPage);
+
         } catch (Exception $e) {
             Log::error('Error retrieving audit logs: ' . $e->getMessage());
             throw new Exception('Error retrieving audit logs');

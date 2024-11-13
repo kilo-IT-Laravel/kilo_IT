@@ -120,7 +120,7 @@ class TopicController extends Controller
     {
         try {
             $this->Repository->deleteTopic($id);
-            return response()->json(['success' => true, 'message' => 'successfully deleted topic data'], 204);
+            return response()->json(['success' => true, 'message' => 'successfully deleted topic data'], 200);
         } catch (ModelNotFoundException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
         } catch (Exception $e) {

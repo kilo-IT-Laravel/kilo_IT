@@ -39,8 +39,8 @@ class SiteSettingController extends Controller
 
             $settings = $this->Repository->getAllSettings($search, $perPage);
             return response()->json([
-                'success' => true, 
-                'message' => 'Successfully retrieving settings', 
+                'success' => true,
+                'message' => 'Successfully retrieving settings',
                 'data' => index::collection($settings),
                 'meta' => $this->pagination->metadata($settings)
             ], 200);
@@ -57,8 +57,8 @@ class SiteSettingController extends Controller
                 return response()->json(['message' => 'Setting not found'], 404);
             }
             return response()->json([
-                'success' => true, 
-                'message' => 'Successfully retrieving setting', 
+                'success' => true,
+                'message' => 'Successfully retrieving setting',
                 'data' => new show($setting)
             ], 200);
         } catch (ModelNotFoundException $e) {
@@ -113,7 +113,7 @@ class SiteSettingController extends Controller
             if (!$deleted) {
                 return response()->json(['message' => 'Setting not found'], 404);
             }
-            return response()->json(['success' => true, 'message' => 'Failed to delete setting'], 204);
+            return response()->json(['success' => true, 'message' => 'Failed to delete setting'], 200);
         } catch (Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }

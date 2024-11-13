@@ -260,6 +260,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::put('/test' , function(Request $req){
     return [
-        'val1' => $req->input('name') 
+        'val1' => $req->input('name')
     ];
 });

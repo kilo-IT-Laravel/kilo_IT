@@ -127,7 +127,7 @@ class CategoryController extends Controller
     {
         try {
             $this->Repository->deleteCategory($id);
-            return response()->json(['success' => true, 'message' => 'Successfully deleted category'], 204);
+            return response()->json(['success' => true, 'message' => 'Successfully deleted category'], 200);
         } catch (ModelNotFoundException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
         } catch (Exception $e) {
@@ -151,7 +151,7 @@ class CategoryController extends Controller
     {
         try {
             $this->Repository->forceDeleteCategory($id);
-            return response()->json(['success' => true, 'message' => 'successfully permenantly deleted category'], 204);
+            return response()->json(['success' => true, 'message' => 'successfully permenantly deleted category'], 200);
         } catch (ModelNotFoundException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
         } catch (Exception $e) {

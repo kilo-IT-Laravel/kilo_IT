@@ -110,7 +110,7 @@ class postPhotosController extends Controller
     public function forceDelete(int $id) {
         try{
             $this->Repository->forceDeleteMedia($id);
-            return response()->json(['success' => true, 'message' => 'Successfully permenantly deleted media'], 204);
+            return response()->json(['success' => true, 'message' => 'Successfully permenantly deleted media'], 200);
         }catch(ModelNotFoundException $e){
             return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
         }catch(Exception $e){
